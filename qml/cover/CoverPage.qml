@@ -35,7 +35,7 @@ CoverBackground {
     Label {
         id: label
         anchors.centerIn: parent
-        text: "Sail Freecell"
+        text: "Sail Free Cell"
     }
 
     CoverActionList {

@@ -6,21 +6,21 @@
 #         - desktop icon filename must be changed
 #         - desktop filename must be changed
 #         - icon definition filename in desktop file must be changed
-TARGET = SailFreeCell
+TARGET = harbour-sailfreecell
 
 CONFIG += sailfishapp
 
 SOURCES += src/SailFreeCell.cpp
 
-OTHER_FILES += qml/SailFreeCell.qml \
+OTHER_FILES += \
     qml/cover/CoverPage.qml \
     qml/pages/FirstPage.qml \
-    qml/pages/SecondPage.qml \
-    rpm/SailFreeCell.spec \
-    rpm/SailFreeCell.yaml \
     SailFreeCell.desktop \
     qml/items/Card.qml \
     qml/items/Cell.qml \
     qml/items/PlayField.qml \
-    qml/items/Rules.js
+    qml/items/Rules.js \
+    rpm/harbour-sailfreecell.spec \
+    rpm/harbour-sailfreecell.yaml \
+    qml/harbour-sailfreecell.qml
 
