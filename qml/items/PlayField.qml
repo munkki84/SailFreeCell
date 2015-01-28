@@ -1,36 +1,49 @@
 import QtQuick 2.0
+import Sailfish.Silica 1.0
 
 Item {
     id : playfield
     width : 470; height: 400
-    //signal movemade(var move)
     property bool canAutoMove : false
     property string type: "playfield"
+    property int smallGap: 2
+    property int bigGap: 4
+    property int cellGap: 20
+    property int landCellsX : 570
+    property int landCellsY : 12//140
+    property int landFieldsY : 12
+    property int landFieldsX : 82
+    property int portCellsX : 12
+    property int portCellsY : 0
 
     Cell {
         id: cell1
         stack: 0
         type: "cell"
-        x: 10; y:0
+        x: deviceOrientation === Orientation.Portrait ? portCellsX : field8.x + field8.width + 60
+        y: deviceOrientation === Orientation.Portrait ? portCellsY  : landCellsY
     }
 
     Cell {
         id: cell2
         stack: 0
         type: "cell"
-        x: 74; y: 0
+        x: deviceOrientation === Orientation.Portrait ? cell1.x + cell1.width + smallGap/*74*/ : cell1.x
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : cell1.y + cell1.height + smallGap
     }
     Cell {
         id: cell3
         stack: 0
         type: "cell"
-        x: 138; y: 0
+        x: deviceOrientation === Orientation.Portrait ? cell2.x + cell2.width + smallGap/*138*/ : cell1.x
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : cell2.y + cell2.height + smallGap
     }
     Cell {
         id: cell4
         stack: 0
         type: "cell"
-        x: 202; y: 0
+        x: deviceOrientation === Orientation.Portrait ? cell3.x + cell3.width + smallGap/*202*/ : cell1.x
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : cell3.y + cell3.height + smallGap
     }
 
     Cell {
@@ -40,7 +53,8 @@ Item {
         acceptedSuits:[1]
         suitChar: "\u2660"
         type: "suitcell"
-        x: 270; y:0
+        x: deviceOrientation === Orientation.Portrait ? cell4.x + cell4.width + bigGap/*270*/ :  cell4.x + cell4.width + bigGap
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : landCellsY
     }
 
     Cell {
@@ -50,7 +64,8 @@ Item {
         acceptedSuits:[2]
         type: "suitcell"
         suitChar: "\u2663"
-        x: 334; y: 0
+        x: deviceOrientation === Orientation.Portrait ? suit1.x + suit1.width + smallGap  : suit1.x/*334*/
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : suit1.y + suit1.height + smallGap
     }
     Cell {
         id: suit3
@@ -59,7 +74,8 @@ Item {
         acceptedSuits:[3]
         type: "suitcell"
         suitChar: "\u2665"
-        x: 398; y: 0
+        x: deviceOrientation === Orientation.Portrait ? suit2.x + suit2.width + smallGap  : suit1.x/*398*/
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : suit2.y + suit2.height + smallGap
     }
     Cell {
         id: suit4
@@ -68,59 +84,68 @@ Item {
         acceptedSuits:[4]
         type: "suitcell"
         suitChar: "\u2666"
-        x: 462; y: 0
+        x: deviceOrientation === Orientation.Portrait ? suit3.x + suit3.width + smallGap  : suit1.x/*462*/
+        y: deviceOrientation === Orientation.Portrait ? portCellsY : suit3.y + suit3.height + smallGap
     }
 
     Cell {
         id: field1
         stack: 0
         type: "freecell"
-        x: 10; y:120
+        x: deviceOrientation === Orientation.Portrait ? portCellsX : landFieldsX
+        y: deviceOrientation === Orientation.Portrait ? suit4.y + suit4.height + cellGap : landFieldsY/*120*/
     }
 
     Cell {
         id: field2
         stack: 0
         type: "freecell"
-        x: 74; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field1.x + field1.width + smallGap/*74*/ : field1.x + field1.width + smallGap
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
     Cell {
         id: field3
         stack: 0
         type: "freecell"
-        x: 138; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field2.x + field2.width + smallGap/*138*/ : field2.x + field2.width + smallGap
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
     Cell {
         id: field4
         stack: 0
         type: "freecell"
-        x: 202; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field3.x + field3.width + smallGap/*202*/ : field3.x + field3.width + smallGap
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
 
     Cell {
         id: field5
         stack: 0
         type: "freecell"
-        x: 270; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field4.x + field4.width + smallGap : field4.x + field4.width + smallGap /*270*/
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
 
     Cell {
         id: field6
         stack: 0
         type: "freecell"
-        x: 334; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field5.x + field5.width + smallGap : field5.x + field5.width + smallGap /*334*/
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
     Cell {
         stack: 0
         id: field7
         type: "freecell"
-        x: 398; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field6.x + field6.width + smallGap : field6.x + field6.width + smallGap /*398*/
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
     Cell {
         stack: 0
         id: field8
         type: "freecell"
-        x: 462; y: 120
+        x: deviceOrientation === Orientation.Portrait ? field7.x + field7.width + smallGap : field7.x + field7.width + smallGap /*462*/
+        y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
 
     property var blackSuits : [1, 2]

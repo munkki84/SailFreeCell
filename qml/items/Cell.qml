@@ -9,9 +9,10 @@ Rectangle {
     property string suitChar
     property var acceptedSuits : [1,2,3,4]
     property string type
+    property bool acceptsDrop : false;
     z: 1
-    width: 62
-    height: 86
+    width: deviceOrientation === Orientation.Portrait ? 62 : 76
+    height: deviceOrientation === Orientation.Portrait ? 86 : 96
 
     color: Theme.rgba(Theme.secondaryHighlightColor, 0.5)//"#800000FF"
     border.color: "black"
@@ -28,8 +29,8 @@ Rectangle {
                 enabled: true
             }
         }
-
     ]
+
 
     function reset()
     {
@@ -54,7 +55,7 @@ Rectangle {
         Card.anchors.horizontalCenter = dropRect.horizontalCenter
         Card.y = 0
 
-        dropRect.modifyStack(Card.stack + 1)
+        Card.totalStack = dropRect.modifyStack(Card.stack + 1)
 
         if (type === "suitcell")
         {
@@ -71,7 +72,6 @@ Rectangle {
                 Card.setDrop(true)
             }
         }
-
     }
     function removeCard(Card)
     {
@@ -89,6 +89,7 @@ Rectangle {
         if (dropRect.stack >= dropRect.maxStack) {
             dropArea.enabled = false
         }
+        return stack;
     }
 
     Text {
@@ -105,28 +106,39 @@ Rectangle {
         anchors.fill: parent
 
         onDropped: {
-            drop.source.dragParent.removeCard(drop.source)
+            if (acceptsDrop)
+            {
+                drop.source.dragParent.removeCard(drop.source)
 
-            //console.log("drop 1")
-            dropCard(drop.source)
+                //console.log("drop 1")
+                dropCard(drop.source)
 
-            drop.accept()
+                drop.accept()
+            }
+            acceptsDrop = false
         }
 
         onEntered: {
+
             if (Rules.canDropOnCell(drag.source, dropRect))
             {
-                drag.accept()
+                acceptsDrop = true
+                //drag.accept()
             }
             else
             {
-                drag.accepted = false
+                acceptsDrop = false
+                //drag.accepted = false
             }
 
         }
+        onExited:
+        {
+            acceptsDrop = false
+        }
         states: [
             State {
-                when: dropArea.containsDrag
+                when: acceptsDrop//dropArea.containsDrag
                 PropertyChanges {
                     target: dropRect
                     border.color: "white"

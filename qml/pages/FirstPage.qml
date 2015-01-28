@@ -33,7 +33,9 @@ import Sailfish.Silica 1.0
 import "../items"
 
 Page {
+    property string name: "mainPage"
     id: page
+    allowedOrientations: Orientation.Portrait|Orientation.Landscape
 
     // To enable PullDownMenu, place our content in a SilicaFlickable
     SilicaFlickable {
@@ -52,31 +54,33 @@ Page {
 
         // Place our content in a Column.  The PageHeader is always placed at the top
         // of the page, followed by our content.
-        Column {
-             y: 100
+        Rectangle {
+             y: 0
             id: column
 
             width: page.width
-            spacing: Theme.paddingLarge
-//            PageHeader {
-//                title: "UI Template"
-//            }
-//            Label {
-//                x: Theme.paddingLarge
-//                text: "Hello Sailors"
-//                color: Theme.secondaryHighlightColor
-//                font.pixelSize: Theme.fontSizeExtraLarge
-//            }
+
             Rectangle
             {
                 id: rect
-                width: page.width
-                height: 100
+                y: deviceOrientation === Orientation.Portrait ? 12 : 0
+                x: deviceOrientation === Orientation.Portrait ? 0 : 12
+                width: deviceOrientation === Orientation.Portrait ? page.width : 60
+                anchors.left: deviceOrientation === Orientation.Portrait ? column.left : undefined
+                height: deviceOrientation === Orientation.Portrait ? 60 : page.height
                 color : "transparent"
+                //border.color: "white"
+                //border.width: 1
                 Button
                 {
-                    anchors.left: rect.left
+
+                    anchors.left: deviceOrientation === Orientation.Portrait ? rect.left : rect.left
+                    width:  deviceOrientation === Orientation.Portrait ? rect.width / 2 : rect.width
+                    height: deviceOrientation === Orientation.Portrait ? rect.height : rect.height / 2
                     text : "Undo"
+                    anchors.top: deviceOrientation === Orientation.Portrait ? rect.top : undefined
+                    anchors.bottom: deviceOrientation === Orientation.Portrait ? undefined : rect.bottom
+                    rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
                     onClicked:
                     {
                         field.undoMove();
@@ -84,8 +88,14 @@ Page {
                 }
                 Button
                 {
-                    anchors.right: rect.right
+                    width:  deviceOrientation === Orientation.Portrait ? rect.width / 2 : rect.width
+                    height: deviceOrientation === Orientation.Portrait ? rect.height : rect.height / 2
+                    y: deviceOrientation === Orientation.Portrait ? 0 : rect.height
+                    anchors.top: deviceOrientation === Orientation.Portrait ? rect.top : rect.top
+                    anchors.right: deviceOrientation === Orientation.Portrait ? rect.right : rect.right
+
                     text : "New Game"
+                    rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
                     onClicked:
                     {
                         field.resetField();
@@ -95,7 +105,7 @@ Page {
             PlayField
             {
                 id: field
-
+                y: deviceOrientation === Orientation.Portrait ? rect.height + 20 : 0
             }
         }
     }
