@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
+import QtQuick.LocalStorage 2.0
 
 Item {
     id : playfield
@@ -12,9 +13,11 @@ Item {
     property int landCellsX : 570
     property int landCellsY : 12//140
     property int landFieldsY : 12
-    property int landFieldsX : 82
+    property int landFieldsX : 112
     property int portCellsX : 12
     property int portCellsY : 0
+    property var selectedCard : null
+    property var db
 
     Cell {
         id: cell1
@@ -153,22 +156,74 @@ Item {
     property var deckArray : []
     property var cardsArray : []
     property var suitCells : [suit1, suit2, suit3, suit4]
+    property var cells: [cell1, cell2, cell3, cell4, suit1, suit2, suit3, suit4, field1, field2, field3, field4, field5, field6, field7, field8]
     property var moves : []
+    property var rejectedDrop : []
+
     function resetField()
     {
-        if (Qt.animating !== 0)
+        if (Qt.animating !== 0 || Qt.reset === 1)
         {
             return;
         }
 
+        db.transaction(
+           function(tx) {
+               tx.executeSql('DELETE FROM CardPos')
+               tx.executeSql('DELETE FROM Move')
+           }
+        )
+
+        Qt.reset = 1;
+
+        var d=0;
         moves = [];
         canAutoMove = false;
         Qt.freeCells = 12;
         Qt.animating = 0;
         var cardPlaces = [field1, field2, field3, field4, field5, field6, field7, field8];
-
         var placeIndex = 0;
+        resetCells()
 
+        for (var i = 0; i < cardsArray.length; i++)
+        {
+            var card = cardsArray[i];
+            card.reset();
+//            if ('type' in card.parent)
+//            {
+//                card.parent.removeCard(card);
+//            }
+            deckArray.push(card);
+        }
+
+        var bulkMove = []
+        while (deckArray.length > 0)
+        {
+            var nextIndex = Math.floor(Math.random() * deckArray.length);
+
+            var next = deckArray.splice(nextIndex, 1).pop();
+
+            if (next == null)
+            {
+                console.log("Error");
+            }
+
+            //cardPlaces[placeIndex % 8].dropCard(next);
+            bulkMove.push({card : next, to:  cardPlaces[placeIndex % 8] })
+            //makeMove(next, cardPlaces[placeIndex % 8], true)
+            cardPlaces.splice(placeIndex % 8, 1, next);
+
+            placeIndex = placeIndex + 1;
+
+        }
+        makeBulkMove(bulkMove)
+        canAutoMove = true;
+
+        Qt.reset = 0;
+    }
+
+    function resetCells()
+    {
         field1.reset()
         field2.reset()
         field3.reset()
@@ -185,40 +240,39 @@ Item {
         suit2.reset()
         suit3.reset()
         suit4.reset()
+    }
 
-        for (var i = 0; i < cardsArray.length; i++)
+    function makeBulkMove(bulkMove)
+    {
+        if (bulkMove.length > 0)
         {
-            var card = cardsArray[i];
-            card.reset();
-//            if ('type' in card.parent)
-//            {
-//                card.parent.removeCard(card);
-//            }
-            deckArray.push(card);
+            db.transaction(
+                function(tx) {
+                    for (var i = 0; i < bulkMove.length; i++) {
+                        bulkMove[i].to.dropCard(bulkMove[i].card);
+
+                        tx.executeSql('INSERT INTO CardPos VALUES(?, ?)', [bulkMove[i].card.dbId, bulkMove[i].to.dbId])
+
+                    }
+                }
+            )
         }
-
-        while (deckArray.length > 0)
-        {
-            var nextIndex = Math.floor(Math.random() * deckArray.length);
-
-            var next = deckArray.splice(nextIndex, 1).pop();
-
-            if (next == null)
-            {
-                console.log("Error");
-            }
-
-            cardPlaces[placeIndex % 8].dropCard(next);
-            cardPlaces.splice(placeIndex % 8, 1, next);
-
-            placeIndex = placeIndex + 1;
-
-        }
-        canAutoMove = true;
     }
 
     function movemade(move)
     {
+        db.transaction(
+            function(tx) {
+                //for (var i = 0; i < move.length; i++)
+                if (move.length > 0)
+                {
+                    //Move(Id INT PRIMARY KEY AUTOINCEREMENT, parentId INT, cardId INT NOT NULL, fromId INT NOT NULL, toId INT NOT NULL)
+                    tx.executeSql('INSERT INTO Move (parentId, cardId, fromId, toId) VALUES(?, ?, ?, ?)',
+                                  [moves.length, move[move.length - 1].moved.dbId, move[move.length - 1].from.dbId, move[move.length - 1].to.dbId])
+                }
+            }
+        )
+
         if (!canAutoMove)
         {
             return;
@@ -231,27 +285,9 @@ Item {
             var card = cardsArray[i];
             if (card.stack === 0 && card.state !== "running")
             {
-                var suitCell = suitCells[card.suit - 1];
-                if (suitCell.stack + 1 === card.rank)
+                if (tryMoveToSuitCell(card, move, true))
                 {
-                    if ((suitCells[card.acceptedSuits[0] - 1].stack >= card.rank - 1 &&
-                         suitCells[card.acceptedSuits[1] - 1].stack >= card.rank - 1 ) ||
-                        card.rank === 2)
-                    {
-                        var autoMove =  {moved : card, from : card.parent, to : suitCell};
-                        move.push(autoMove);
-                        card.lastMove = move;
-                        card.parent.removeCard(card);
-
-                        card.toTopLevel();
-
-                        card.targetParent = suitCell;
-
-                        card.state = "running";
-                        Qt.animating = Qt.animating + 1;
-
-                        break;
-                    }
+                    break;
                 }
             }
          }
@@ -266,13 +302,113 @@ Item {
         {
             return;
         }
+
+        var parentId = moves.length
+        db.transaction(
+           function(tx) {
+               tx.executeSql('DELETE FROM Move WHERE parentId = ?', [parentId])
+           }
+        )
+
         var lastMove = moves.pop();
         while (lastMove.length > 0)
         {
             var move = lastMove.pop();
-            console.log(move);
-            move.moved.parent.removeCard(move.moved);
-            move.from.dropCard(move.moved);
+            makeMove(move.moved, move.from, true)
+
+            //makeMove(move);
+            //move.moved.parent.removeCard(move.moved);
+            //move.from.dropCard(move.moved);
+        }
+    }
+
+    function makeMove(card, to, saveToDb)
+    {
+        if (card.parent.type !== "playfield")
+        {
+            card.parent.removeCard(card);
+        }
+        to.dropCard(card);
+
+        if (saveToDb)
+        {
+            db.transaction(
+               function(tx) {
+                   tx.executeSql('DELETE FROM CardPos WHERE cardId = ?', [card.dbId])
+                   tx.executeSql('INSERT INTO CardPos VALUES(?, ?)', [card.dbId, to.dbId])
+
+               }
+            )
+        }
+    }
+
+    function makeAnimatedMove(parentmove, move)
+    {
+        move.moved.lastMove = parentmove;
+        move.moved.parent.removeCard(move.moved);
+        move.moved.toTopLevel();
+        move.moved.targetParent = move.to;
+        move.moved.state = "running";
+        Qt.animating = Qt.animating + 1;
+
+        db.transaction(
+           function(tx) {
+               tx.executeSql('DELETE FROM CardPos WHERE cardId = ?', [move.moved.dbId])
+               tx.executeSql('INSERT INTO CardPos VALUES(?, ?)', [move.moved.dbId, move.to.dbId])
+
+               //tx.executeSql('INSERT INTO Move (parentId, cardId, fromId, toId) VALUES(?, ?, ?, ?)', [moves.length, move.moved.dbId, move.from.dbId, move.to.dbId])
+           }
+        )
+    }
+
+    function tryMoveToSuitCell(card, parentmove, checkOtherSuits)
+    {
+        if (checkOtherSuits)
+        {
+            if ((suitCells[card.acceptedSuits[0] - 1].stack < card.rank - 1 ||
+                 suitCells[card.acceptedSuits[1] - 1].stack < card.rank - 1) &&
+                card.rank !== 2)
+            {
+                return false;
+            }
+        }
+
+        var suitCell = suitCells[card.suit - 1];
+        if (suitCell.stack + 1 === card.rank)
+        {
+
+            var autoMove =  {moved : card, from : card.parent, to : suitCell};
+            parentmove.push(autoMove);
+            makeAnimatedMove(parentmove, autoMove);
+
+            return true;
+
+        }
+
+        return false;
+    }
+
+//    function sendOnEntered(drag, rejectCard)
+//    {
+//        rejectedDrop.push(rejectCard);
+
+//        childAt(drag.x, drag.y)
+//        //for (var i = 0; i < cardsArray.length; i++)
+//        //{
+//        //    var card = cardsArray[i];
+//        //    if (card.)
+//        //}
+//    }
+
+    function getWithdbId(dbId)
+    {
+        if (dbId < 52)
+        {
+            return cardsArray[dbId];
+        }
+        else
+        {
+            return cells[dbId - 52];
         }
     }
 
@@ -281,12 +417,43 @@ Item {
 
         Component.onCompleted: {
 
+            Qt.freeCells = 12;
+
+            resetCells();
+            db = LocalStorage.openDatabaseSync("SailFreeCellDB", "1.0", "Database", 1000000);
+            var rs = null;
+            var movesRS = null;
+            var stateWasSaved = false;
+            db.transaction(
+                function(tx) {
+                    // Drop table if update needed
+                    //tx.executeSql('DROP TABLE IF EXISTS CardPos');
+                    //tx.executeSql('DROP TABLE IF EXISTS Move');
+
+                    // Create the database if it doesn't already exist
+                    tx.executeSql('CREATE TABLE IF NOT EXISTS CardPos(cardId INT NOT NULL UNIQUE, posId INT NOT NULL)');
+                    tx.executeSql('CREATE TABLE IF NOT EXISTS Move(Id INTEGER PRIMARY KEY AUTOINCREMENT, parentId INT, cardId INT NOT NULL, fromId INT NOT NULL, toId INT NOT NULL)');
+
+
+                    rs = tx.executeSql('SELECT * FROM CardPos');
+
+                    if (rs.rows.length > 0)
+                    {
+                       stateWasSaved = true;
+                    }
+
+                    movesRS = tx.executeSql('SELECT Id, parentId, cardId, fromId, toId FROM Move ORDER BY parentId, Id');
+
+                }
+            )
+
             Qt.animating = 0;
             var component = Qt.createComponent("Card.qml");
             var aSuits;
             var suitChar;
             var suitColor;
             var rankChar;
+            var dbId = 0;
             for (var suit = 1; suit < 5; suit++)
             {
                 for (var rank = 1; rank < 14; rank++)
@@ -329,7 +496,8 @@ Item {
                     }
 
                     var card = component.createObject(playfield,
-                                                        { "rank": rank,
+                                                        { "dbId": dbId,
+                                                          "rank": rank,
                                                           "rankChar": rankChar,
                                                           "suit": suit,
                                                           "suitChar": suitChar,
@@ -338,13 +506,78 @@ Item {
                                                           "field" : playfield
                                                       });
 
-
+                    card.reset();
                     cardsArray.push(card);
+                    dbId++;
                 }
             }
-            resetField();
+            cardsArray.sort(function(a, b) { return a.dbId - b.dbId })
 
+            var cellId = 52;
+            for(var j = 0; j < cells.length; j++)
+            {
+                cells[j].dbId = cellId;
+                cellId++;
+            }
+
+
+            if (stateWasSaved)
+            {
+                for(var i = 0; i < rs.rows.length; i++) {
+                    var cardId = rs.rows.item(i).cardId
+                    var posId = rs.rows.item(i).posId
+
+                    var to = getWithdbId(posId);
+
+                    makeMove(cardsArray[cardId], to, false);
+                }
+
+                var currentId = 0;
+                var currentMove = [];
+                for(var row = 0; row < movesRS.rows.length; row++) {
+                    var parentId = movesRS.rows.item(row).parentId
+                    var movedCard = cardsArray[movesRS.rows.item(row).cardId]
+                    var fromItem = getWithdbId(movesRS.rows.item(row).fromId)
+                    var toItem = getWithdbId(movesRS.rows.item(row).toId)
+
+                    if (currentId === parentId)
+                    {
+                        currentMove.push({moved : movedCard, from : fromItem, to : toItem})
+                    }
+                    else
+                    {
+                        if (currentMove.length > 0)
+                        {
+                            moves.push(currentMove.slice(0));
+                        }
+                        currentMove = [];
+                        currentMove.push({moved : movedCard, from : fromItem, to : toItem})
+                        currentId = parentId
+                    }
+                }
+                if (currentMove.length > 0)
+                {
+                    moves.push(currentMove)
+                }
+
+//                for (var k = 0; k < moves.length; k++)
+//                {
+//                    var m = moves[k];
+//                    for (var l = 0; l < m.length; l++)
+//                    {
+//                        console.log(k + " " + l + " " + m[l].moved.dbId + " " + m[l].from.dbId + " " + m[l].to.dbId);
+//                    }
+//                }
+                canAutoMove = true;
+
+            }
+            else
+            {
+                resetField();
+            }
         }
+
+
     }
 
 }

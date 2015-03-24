@@ -65,7 +65,7 @@ Page {
                 id: rect
                 y: deviceOrientation === Orientation.Portrait ? 12 : 0
                 x: deviceOrientation === Orientation.Portrait ? 0 : 12
-                width: deviceOrientation === Orientation.Portrait ? page.width : 60
+                width: deviceOrientation === Orientation.Portrait ? page.width : 80
                 anchors.left: deviceOrientation === Orientation.Portrait ? column.left : undefined
                 height: deviceOrientation === Orientation.Portrait ? 60 : page.height
                 color : "transparent"
@@ -80,7 +80,7 @@ Page {
                     text : "Undo"
                     anchors.top: deviceOrientation === Orientation.Portrait ? rect.top : undefined
                     anchors.bottom: deviceOrientation === Orientation.Portrait ? undefined : rect.bottom
-                    rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
+                    //rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
                     onClicked:
                     {
                         field.undoMove();
@@ -94,12 +94,16 @@ Page {
                     anchors.top: deviceOrientation === Orientation.Portrait ? rect.top : rect.top
                     anchors.right: deviceOrientation === Orientation.Portrait ? rect.right : rect.right
 
-                    text : "New Game"
-                    rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
-                    onClicked:
+                    text : deviceOrientation === Orientation.Portrait ? "New Game" : " New\nGame"
+                    //rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
+
+
+                    //onClicked:
+                    onPressAndHold:
                     {
                         field.resetField();
                     }
+
                 }
             }
             PlayField

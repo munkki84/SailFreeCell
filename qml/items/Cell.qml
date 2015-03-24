@@ -3,13 +3,17 @@ import Sailfish.Silica 1.0
 import "Rules.js" as Rules
 Rectangle {
     id: dropRect
+    property int dbId
     property int stack: 0
-    property int stackOffset: 0
+    property int totalStack: 0
+    //property int stackOffset: 0
     property int maxStack : 1
     property string suitChar
     property var acceptedSuits : [1,2,3,4]
     property string type
     property bool acceptsDrop : false;
+    property var childCard;
+
     z: 1
     width: deviceOrientation === Orientation.Portrait ? 62 : 76
     height: deviceOrientation === Orientation.Portrait ? 86 : 96
@@ -21,6 +25,7 @@ Rectangle {
 
     radius: 10
 
+    StateGroup {
     states: [
         State {
             when: stack < maxStack
@@ -29,14 +34,22 @@ Rectangle {
                 enabled: true
             }
         }
+
+
     ]
+    }
 
 
     function reset()
     {
         dropArea.enabled = true
         stack = 0
+        childCard = null
+    }
 
+    function calcOffset()
+    {
+        return 0;
     }
 
     function dropCard(Card)
@@ -51,11 +64,15 @@ Rectangle {
         }
 
         Card.parent = dropRect
+        //childCard = Card
         Card.anchors.verticalCenter = dropRect.verticalCenter
         Card.anchors.horizontalCenter = dropRect.horizontalCenter
         Card.y = 0
+        dropRect.modifyStack(Card.stack + 1)
 
-        Card.totalStack = dropRect.modifyStack(Card.stack + 1)
+        //Card.totalStack = dropRect.modifyStack(Card.stack + 1)
+
+        Card.setTotalStack(stack)
 
         if (type === "suitcell")
         {
@@ -75,6 +92,7 @@ Rectangle {
     }
     function removeCard(Card)
     {
+        //childCard = null
         modifyStack(-(Card.stack + 1))
 
         if (type != "suitcell")
@@ -92,6 +110,20 @@ Rectangle {
         return stack;
     }
 
+    function mapToRoot()
+    {
+        var coordX = dropRect.x + dropRect.parent.x
+        var coordY = dropRect.y + dropRect.parent.y
+        var root = dropRect.parent
+        while(root.parent.name === 'undefined' || root.parent.name !== "mainPage")
+        {
+            root = root.parent
+            coordX = coordX + root.x
+            coordY = coordY + root.y
+        }
+        var retval = {item : root, x : coordX, y : coordY};
+        return retval
+    }
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
@@ -108,10 +140,12 @@ Rectangle {
         onDropped: {
             if (acceptsDrop)
             {
-                drop.source.dragParent.removeCard(drop.source)
+                drop.source.parent = drop.source.dragParent
+                field.makeMove(drop.source, dropRect, true)
+                //drop.source.dragParent.removeCard(drop.source)
 
                 //console.log("drop 1")
-                dropCard(drop.source)
+                //dropCard(drop.source)
 
                 drop.accept()
             }
@@ -149,4 +183,24 @@ Rectangle {
 
     }
 
+    MouseArea {
+        id: mouseArea
+
+        anchors.fill: parent
+
+        onClicked:
+        {
+            if (dropRect.parent.selectedCard !== null)
+            {
+                if (Rules.canDropOnCell(dropRect.parent.selectedCard, dropRect))
+                {
+                    var move = [{moved : dropRect.parent.selectedCard, from : dropRect.parent.selectedCard.parent, to : dropRect}]
+                    dropRect.parent.moves.push(move);
+                    dropRect.parent.makeAnimatedMove(move, move[0]);
+                }
+                dropRect.parent.selectedCard.acceptsDrop = false;
+                dropRect.parent.selectedCard = null;
+            }
+        }
+    }
 }
