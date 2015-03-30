@@ -27,7 +27,10 @@ Rectangle {
     property var lastMove;
     property var childCard : null;
     property bool acceptsDrop : false;
-
+    property var hotSpots : deviceOrientation === Orientation.Portrait ?
+                                [{x: 5, y: 5}, {x: 55, y: 5}]://, {x: 5, y: 42 }, {x: 55, y: 42}] :
+                                [{x: 5, y: 5}, {x: 69, y: 5}]//, {x: 5, y: 47 }, {x: 69, y: 47}]
+    property bool dropEnabled : dropArea.enabled
     width: deviceOrientation === Orientation.Portrait ? 60 : 74
     height: deviceOrientation === Orientation.Portrait ? 84 : 94
     color: "white"
@@ -38,12 +41,81 @@ Rectangle {
     radius: 10
 
     Drag.active: dragArea.drag.active
-    Drag.hotSpot.x: //width / 2
-                    5
-    Drag.hotSpot.y: //height / 2
-                    5
+    Drag.hotSpot.x: 5
+    Drag.hotSpot.y: 5
 
+    onXChanged: {
+        if (Drag.active)
+        {
+            hotspotHack();
+        }
+    }
+    onYChanged: {
+        if (Drag.active)
+        {
+            hotspotHack();
+        }
+    }
 
+    property var dropCandidates: []
+
+    //
+    // hotspotHack()
+    // hack to implement multiple hotspots, function first finds all possible cards or cells
+    // that each hotspot can drop to. Then hotspot that is closest to a droppable item is selected.
+    // Effectively dragged card will be dropped on a card or cell that dragged card is covering the most.
+    //
+    function hotspotHack(){
+
+        dropCandidates = []
+
+        for (var i = 0; i < hotSpots.length; i++)
+        {
+            var collidingItems = field.getCollidingDroppableItems(card, hotSpots[i].x, hotSpots[i].y);
+
+            for (var j = 0; j < collidingItems.length; j++)
+            {
+                var item = collidingItems[j]
+                if (item.item.type === "card")
+                {
+                    if (Rules.canDropOnCard(card, item.item))
+                    {
+                         dropCandidates.push({spot: hotSpots[i], distance: item.distance});
+                    }
+                }
+                else
+                {
+                    if (Rules.canDropOnCell(card, item.item))
+                    {
+                        dropCandidates.push({spot: hotSpots[i], distance: item.distance});
+                    }
+                }
+            }
+        }
+
+        var bestSpot = null
+        for (var k = 0; k < dropCandidates.length; k++)
+        {
+            if (bestSpot === null)
+            {
+                bestSpot = dropCandidates[k]
+            }
+            else
+            {
+                if (bestSpot.distance > dropCandidates[k].distance)
+                {
+                    bestSpot = dropCandidates[k]
+                }
+            }
+
+        }
+
+        if (bestSpot !== null)
+        {
+            Drag.hotSpot.x = bestSpot.spot.x
+            Drag.hotSpot.y = bestSpot.spot.y
+        }
+    }
 
 
     states: [
@@ -52,11 +124,9 @@ Rectangle {
             name: "running"
             PropertyChanges { target: card;
                 x: targetParent.mapToRoot().x
-                y: targetParent.mapToRoot().y + targetParent.calcOffset()
+                y: targetParent.mapToRoot().y + targetParent.maxOffset
             }
         }
-
-
     ]
 
     StateGroup
@@ -70,12 +140,12 @@ Rectangle {
                 }
             },
             State {
-                    when: deviceOrientation === Orientation.Landscape && card.parent.type === "card"
-                    PropertyChanges {
-                        target: card;
-                        y: calcOffset()
-                    }
+                when: deviceOrientation === Orientation.Landscape && card.parent.type === "card"
+                PropertyChanges {
+                    target: card;
+                    y: calcOffset()
                 }
+            }
         ]
     }
 
@@ -100,14 +170,10 @@ Rectangle {
 
                     Qt.animating = Qt.animating - 1;
                     field.movemade(lastMove);
-
                 }
             }
-    }
-
+        }
     ]
-
-
 
     function calcOffset()
     {
@@ -116,7 +182,6 @@ Rectangle {
             return totalStack < stackNarrowStart ? maxOffset :
                                                    maxOffset - (narrowMultiplier * totalStack - stackNarrowStart);
         }
-
         return 0;
     }
 
@@ -132,6 +197,7 @@ Rectangle {
             Card.setDrop(true)           
         }
     }
+
     function setTotalStack(total)
     {
         card.totalStack = total;
@@ -161,6 +227,7 @@ Rectangle {
     function setDrop(value) {
         dropArea.enabled = value
     }
+
     function modifyStack(value) {
         var total = 0;
 
@@ -187,11 +254,8 @@ Rectangle {
         id: rankText
         x:4; y:0
         color: "black"
-        //style: acceptsDrop ? Text.Outline : Text.Normal
-        //styleColor: Theme.highlightColor
         font.pixelSize: 24
         font.bold: true
-        //font.family: "Times"
         text: rankChar
     }
     Text {
@@ -199,10 +263,7 @@ Rectangle {
         x: card.width - font.pixelSize - 4/*32*/;
         y: 0
         color: suitColor
-        //style: acceptsDrop ? Text.Outline : Text.Normal
-        //styleColor: Theme.highlightColor
         font.pixelSize: 24
-        //font.family: "Times"
         text: suitChar
     }
 
@@ -213,9 +274,9 @@ Rectangle {
         height: parent.height
         x: -2;
         y: 0;
-
-        property var lastClick: Date.now()
         drag.target: card
+
+        property real lastClick: Date.now()
 
         onReleased: {
             var retval = card.Drag.drop()
@@ -274,8 +335,6 @@ Rectangle {
             // Check if the card was already clicked
             if (!acceptsDrop)
             {
-
-
                 // card was not clicked, check if there is selected card
                 if (field.selectedCard !== null)
                 {
@@ -283,7 +342,7 @@ Rectangle {
                     field.selectedCard.acceptsDrop = false;
 
                     // check is it possible to drop selected card on this card
-                    if (card.stack === 0 && Rules.canDropOnCard(field.selectedCard, card))
+                    if (Rules.canDropOnCard(field.selectedCard, card) && dropArea.enabled)
                     {
                         // make animated move
                         var move = [{moved : field.selectedCard, from : field.selectedCard.parent, to : card}]
@@ -304,21 +363,16 @@ Rectangle {
                     field.selectedCard = card;
                     acceptsDrop = true;
                 }
-
-
             }
             else
             {
-
-
                 // deselect this card
                 acceptsDrop = false;
                 field.selectedCard = null;
             }
         }
-
-
     }
+
     function toTopLevel()
     {
         card.anchors.horizontalCenter = undefined
@@ -369,9 +423,6 @@ Rectangle {
                 drop.source.parent = drop.source.dragParent
 
                 field.makeMove(drop.source, card, true)
-                //drop.source.dragParent.removeCard(drop.source)
-                //console.log("drop card")
-                //dropCard(drop.source)
 
                 drop.accept()
             }
@@ -380,22 +431,41 @@ Rectangle {
         }
 
         onEntered: {
-            console.log(card.rankChar + card.suitChar)
+            //console.log(card.rankChar + card.suitChar)
             if (Rules.canDropOnCard(drag.source, card))
             {
-                //drag.accept()
                 acceptsDrop = true
             }
             else
             {
-                //drag.accepted = false
                 acceptsDrop = false
-                //field.sendOnEntered(drag, card)
             }
         }
         onExited:
         {
             acceptsDrop = false
+        }
+
+        onEnabledChanged:
+        {
+            if (dropArea.enabled)
+            {
+
+                if (typeof(field.droppableItems[card.dbId]) === "undefined")
+                {
+                    field.addToDroppableItems(card)
+
+                }
+
+            }
+            else
+            {
+                if (typeof(field.droppableItems[card.dbId]) !== "undefined")
+                {
+                    field.removeFromDroppableItems(card);
+
+                }
+            }
         }
 
         states: [

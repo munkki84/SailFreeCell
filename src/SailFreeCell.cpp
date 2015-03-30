@@ -30,13 +30,31 @@
 
 #ifdef QT_QML_DEBUG
 #include <QtQuick>
+
 #endif
 
+#include <QtQml>
+#include <QQuickView>
+#include <QGuiApplication>
+#include <QQmlContext>
 #include <sailfishapp.h>
-
+#include "dbhelper.h"
 
 int main(int argc, char *argv[])
 {
+    QGuiApplication* app = SailfishApp::application(argc, argv);
+    qmlRegisterType<DBHelper>("CustomLib", 1, 0, "DBHelper");
+
+    QQuickView* view = SailfishApp::createView();
+    DBHelper helper(view);
+    view->rootContext()->setContextProperty("dbHelperObject", &helper);
+
+    view->setResizeMode(QQuickView::SizeRootObjectToView);
+    view->setSource(SailfishApp::pathTo("qml/harbour-sailfreecell.qml"));
+    view->show();
+
+
+
     // SailfishApp::main() will display "qml/template.qml", if you need more
     // control over initialization, you can use:
     //
@@ -46,6 +64,6 @@ int main(int argc, char *argv[])
     //
     // To display the view, call "show()" (will show fullscreen on device).
 
-    return SailfishApp::main(argc, argv);
+    return app->exec();//SailfishApp::main(argc, argv);
 }
 

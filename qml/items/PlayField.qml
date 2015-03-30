@@ -158,7 +158,77 @@ Item {
     property var suitCells : [suit1, suit2, suit3, suit4]
     property var cells: [cell1, cell2, cell3, cell4, suit1, suit2, suit3, suit4, field1, field2, field3, field4, field5, field6, field7, field8]
     property var moves : []
-    property var rejectedDrop : []
+    property var droppableItems : ({})
+
+    function resetDroppableItems()
+    {
+        droppableItems = ({})
+        for (var i = 0; i < cells.length; i++)
+        {
+            addToDroppableItems(cells[i])
+        }
+        for (var j = 0; j < cardsArray.length; j++)
+        {
+            addToDroppableItems(cardsArray[j])
+        }
+
+    }
+
+    //
+    // addToDroppableItems(item)
+    // item: Card or Cell
+    //
+    function addToDroppableItems(item)
+    {
+        droppableItems[item.dbId] = item
+    }
+
+    //
+    // removeFromDroppableItems(item)
+    // item: Card or Cell
+    //
+    function removeFromDroppableItems(item)
+    {
+        delete droppableItems[item.dbId]
+    }
+
+
+    //
+    // getCollidingDroppableItems(card, x, y)
+    // card: card to checked for collision
+    // x, y: hotspot.x and hotspot.y in card coordinate system
+    // returns: colliding items that can be dropped on
+    //
+    function getCollidingDroppableItems(card, x, y)
+    {
+        var retval = []
+        var obj = card.mapToRoot()
+        obj.x = obj.x + x;
+        obj.y = obj.y + y;
+        for (var key in droppableItems)
+        {
+            if (!droppableItems.hasOwnProperty(key))
+            {
+                continue;
+            }
+
+            var droppable = droppableItems[key]
+            var obj2 = droppable.mapToRoot()
+
+
+            if (obj.x >= obj2.x && obj.x <= obj2.x + droppable.width &&
+                obj.y >= obj2.y && obj.y <= obj2.y + droppable.height)
+            {
+                // calculate distance to hotspot
+                var xs = (obj2.x + x) - obj.x
+                var ys = (obj2.y + y) - obj.y
+                var distance = Math.sqrt(xs * xs + ys * ys)
+
+                retval.push({item: droppable, distance: distance})
+            }
+        }
+        return retval
+    }
 
     function resetField()
     {
@@ -167,16 +237,13 @@ Item {
             return;
         }
 
-        db.transaction(
-           function(tx) {
-               tx.executeSql('DELETE FROM CardPos')
-               tx.executeSql('DELETE FROM Move')
-           }
-        )
+        resetDroppableItems()
+
+        dbHelperObject.operate("DELETE FROM CardPos", [], false);
+        dbHelperObject.operate("DELETE FROM Move", [], true);
 
         Qt.reset = 1;
 
-        var d=0;
         moves = [];
         canAutoMove = false;
         Qt.freeCells = 12;
@@ -189,10 +256,6 @@ Item {
         {
             var card = cardsArray[i];
             card.reset();
-//            if ('type' in card.parent)
-//            {
-//                card.parent.removeCard(card);
-//            }
             deckArray.push(card);
         }
 
@@ -208,9 +271,9 @@ Item {
                 console.log("Error");
             }
 
-            //cardPlaces[placeIndex % 8].dropCard(next);
+
             bulkMove.push({card : next, to:  cardPlaces[placeIndex % 8] })
-            //makeMove(next, cardPlaces[placeIndex % 8], true)
+
             cardPlaces.splice(placeIndex % 8, 1, next);
 
             placeIndex = placeIndex + 1;
@@ -242,36 +305,44 @@ Item {
         suit4.reset()
     }
 
+    //
+    // makeBulkMove(bulkMove)
+    // bulkMove: [{ card: cardToMove, to: destinationCardOrCell }]
+    //
     function makeBulkMove(bulkMove)
     {
         if (bulkMove.length > 0)
         {
-            db.transaction(
-                function(tx) {
-                    for (var i = 0; i < bulkMove.length; i++) {
-                        bulkMove[i].to.dropCard(bulkMove[i].card);
+            for (var i = 0; i < bulkMove.length; i++) {
+                var to = bulkMove[i].to
+                var card = bulkMove[i].card
+                to.dropCard(card);
 
-                        tx.executeSql('INSERT INTO CardPos VALUES(?, ?)', [bulkMove[i].card.dbId, bulkMove[i].to.dbId])
+                // save moves to database after the last move is written
+                var consume = i === bulkMove.length - 1;
+                dbHelperObject.operate("INSERT INTO CardPos VALUES(?, ?)", [bulkMove[i].card.dbId, bulkMove[i].to.dbId], consume);
 
-                    }
-                }
-            )
+            }
         }
     }
 
+
+    //
+    // movemade(move)
+    // move: [{ moved: movedCard, from: oldParentCardOrCell, to: destinationCardOrCell }]
+    //
     function movemade(move)
     {
-        db.transaction(
-            function(tx) {
-                //for (var i = 0; i < move.length; i++)
-                if (move.length > 0)
-                {
-                    //Move(Id INT PRIMARY KEY AUTOINCEREMENT, parentId INT, cardId INT NOT NULL, fromId INT NOT NULL, toId INT NOT NULL)
-                    tx.executeSql('INSERT INTO Move (parentId, cardId, fromId, toId) VALUES(?, ?, ?, ?)',
-                                  [moves.length, move[move.length - 1].moved.dbId, move[move.length - 1].from.dbId, move[move.length - 1].to.dbId])
-                }
-            }
-        )
+        // save the last move to database
+        if (move.length > 0)
+        {
+            var lastMove = move[move.length - 1]
+
+            //Move(Id INT PRIMARY KEY AUTOINCEREMENT, parentId INT, cardId INT NOT NULL, fromId INT NOT NULL, toId INT NOT NULL)
+            dbHelperObject.operate("INSERT INTO Move (parentId, cardId, fromId, toId) VALUES(?, ?, ?, ?)",
+                          [moves.length, lastMove.moved.dbId, lastMove.from.dbId, lastMove.to.dbId], true);
+
+        }
 
         if (!canAutoMove)
         {
@@ -279,7 +350,7 @@ Item {
         }
         console.log("moved");
 
-
+        // check if any card can be automoved
         for (var i = 0; i < cardsArray.length; i++)
         {
             var card = cardsArray[i];
@@ -291,9 +362,6 @@ Item {
                 }
             }
          }
-
-
-
     }
 
     function undoMove()
@@ -304,44 +372,46 @@ Item {
         }
 
         var parentId = moves.length
-        db.transaction(
-           function(tx) {
-               tx.executeSql('DELETE FROM Move WHERE parentId = ?', [parentId])
-           }
-        )
+        dbHelperObject.operate("DELETE FROM Move WHERE parentId = ?", [parentId], true)
 
         var lastMove = moves.pop();
         while (lastMove.length > 0)
         {
             var move = lastMove.pop();
             makeMove(move.moved, move.from, true)
-
-            //makeMove(move);
-            //move.moved.parent.removeCard(move.moved);
-            //move.from.dropCard(move.moved);
         }
+
+        // debug only
+        drawTest()
     }
 
+    //
+    // makeMove(card, to, saveToDb)
+    // card: Card to move
+    // to: destination Card or Cell
+    // saveToDb: bool, should move be saved to database
+    //
     function makeMove(card, to, saveToDb)
     {
         if (card.parent.type !== "playfield")
         {
-            card.parent.removeCard(card);
+            var oldParent = card.parent;
+            oldParent.removeCard(card);
         }
         to.dropCard(card);
 
         if (saveToDb)
         {
-            db.transaction(
-               function(tx) {
-                   tx.executeSql('DELETE FROM CardPos WHERE cardId = ?', [card.dbId])
-                   tx.executeSql('INSERT INTO CardPos VALUES(?, ?)', [card.dbId, to.dbId])
-
-               }
-            )
+            dbHelperObject.operate("DELETE FROM CardPos WHERE cardId = ?", [card.dbId], false)
+            dbHelperObject.operate("INSERT INTO CardPos VALUES(?, ?)", [card.dbId, to.dbId], true)
         }
     }
 
+    //
+    // makeAnimatedMove(parentmove, move)
+    // parentmove: [move]
+    // move : { moved: movedCard, from: oldParentCardOrCell, to: destinationCardOrCell }
+    //
     function makeAnimatedMove(parentmove, move)
     {
         move.moved.lastMove = parentmove;
@@ -351,16 +421,17 @@ Item {
         move.moved.state = "running";
         Qt.animating = Qt.animating + 1;
 
-        db.transaction(
-           function(tx) {
-               tx.executeSql('DELETE FROM CardPos WHERE cardId = ?', [move.moved.dbId])
-               tx.executeSql('INSERT INTO CardPos VALUES(?, ?)', [move.moved.dbId, move.to.dbId])
+        dbHelperObject.operate("DELETE FROM CardPos WHERE cardId = ?", [move.moved.dbId], false)
+        dbHelperObject.operate("INSERT INTO CardPos VALUES(?, ?)", [move.moved.dbId, move.to.dbId], true)
 
-               //tx.executeSql('INSERT INTO Move (parentId, cardId, fromId, toId) VALUES(?, ?, ?, ?)', [moves.length, move.moved.dbId, move.from.dbId, move.to.dbId])
-           }
-        )
     }
 
+    //
+    // tryMoveToSuitCell(card, parentmove, checkOtherSuits)
+    // card: Card to tryed be moved
+    // parentmove: [{ moved: movedCard, from: oldParentCardOrCell, to: destinationCardOrCell }]
+    // checkOtherSuits: bool, is other suits in opposite color checked, if they have same amount of cards that Card's rank + 1 is
+    //
     function tryMoveToSuitCell(card, parentmove, checkOtherSuits)
     {
         if (checkOtherSuits)
@@ -388,18 +459,11 @@ Item {
         return false;
     }
 
-//    function sendOnEntered(drag, rejectCard)
-//    {
-//        rejectedDrop.push(rejectCard);
-
-//        childAt(drag.x, drag.y)
-//        //for (var i = 0; i < cardsArray.length; i++)
-//        //{
-//        //    var card = cardsArray[i];
-//        //    if (card.)
-//        //}
-//    }
-
+    //
+    // getWithdbId(dbId)
+    // dbId: int, database Id
+    // returns: Card or Cell
+    //
     function getWithdbId(dbId)
     {
         if (dbId < 52)
@@ -419,7 +483,7 @@ Item {
 
             Qt.freeCells = 12;
 
-            resetCells();
+            //resetCells();
             db = LocalStorage.openDatabaseSync("SailFreeCellDB", "1.0", "Database", 1000000);
             var rs = null;
             var movesRS = null;
@@ -447,8 +511,12 @@ Item {
                 }
             )
 
+            var opened = dbHelperObject.openDatabase("SailFreeCellDB");
+            console.log("db opened: " + opened);
+
             Qt.animating = 0;
             var component = Qt.createComponent("Card.qml");
+            // opposite color suits
             var aSuits;
             var suitChar;
             var suitColor;
@@ -458,22 +526,24 @@ Item {
             {
                 for (var rank = 1; rank < 14; rank++)
                 {
-
-
                     if (suit === 1) {
                         aSuits = redSuits;
+                        // spade
                         suitChar = "\u2660";
                         suitColor = "black";
                     } else if (suit === 2) {
                         aSuits = redSuits;
+                        // club
                         suitChar = "\u2663";
                         suitColor = "black";
                     } else if (suit === 3) {
                         aSuits = blackSuits;
+                        // heart
                         suitChar = "\u2665";
                         suitColor = "red";
                     } else if (suit === 4) {
                         aSuits = blackSuits;
+                        // diamond
                         suitChar = "\u2666";
                         suitColor = "red";
                     }
@@ -519,7 +589,7 @@ Item {
                 cells[j].dbId = cellId;
                 cellId++;
             }
-
+            resetDroppableItems()
 
             if (stateWasSaved)
             {
@@ -560,15 +630,10 @@ Item {
                     moves.push(currentMove)
                 }
 
-//                for (var k = 0; k < moves.length; k++)
-//                {
-//                    var m = moves[k];
-//                    for (var l = 0; l < m.length; l++)
-//                    {
-//                        console.log(k + " " + l + " " + m[l].moved.dbId + " " + m[l].from.dbId + " " + m[l].to.dbId);
-//                    }
-//                }
+                drawTest()
                 canAutoMove = true;
+
+
 
             }
             else
@@ -580,4 +645,33 @@ Item {
 
     }
 
+    property bool debug: false
+    property var dynamic: []
+    function drawTest()
+    {
+        if (!debug) return;
+        while (dynamic.length > 0)
+        {
+            var item = dynamic.pop()
+            item.destroy(1000)
+        }
+
+        for (var key in droppableItems)
+        {
+            if (!droppableItems.hasOwnProperty(key))
+            {
+                continue;
+            }
+
+            var droppable = droppableItems[key]
+            var obj2 = droppable.mapToRoot()
+
+            var test = Qt.createQmlObject(
+                        'import QtQuick 2.0; Rectangle {color: "red"; x:' + obj2.x + ';' +
+                        ' y:' + obj2.y + ';' +
+                        ' width: ' + droppable.width + '; height: ' + droppable.height +'}', playfield, "dynamic");
+            console.log("x:" + test.x + " y:" + test.y + " w:" + test.width + " h:" + test.height)
+            dynamic.push(test)
+        }
+    }
 }

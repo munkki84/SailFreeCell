@@ -10,7 +10,8 @@ TARGET = harbour-sailfreecell
 
 CONFIG += sailfishapp
 
-SOURCES += src/SailFreeCell.cpp
+SOURCES += src/SailFreeCell.cpp \
+    src/dbhelper.cpp
 
 OTHER_FILES += \
     qml/cover/CoverPage.qml \
@@ -24,3 +25,8 @@ OTHER_FILES += \
     rpm/harbour-sailfreecell.yaml \
     qml/harbour-sailfreecell.qml
 
+HEADERS += \
+    src/threadsafequeue.h \
+    src/dbhelper.h
+
+QT += sql

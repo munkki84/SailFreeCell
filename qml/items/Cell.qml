@@ -6,14 +6,14 @@ Rectangle {
     property int dbId
     property int stack: 0
     property int totalStack: 0
-    //property int stackOffset: 0
+    property int maxOffset: 0
     property int maxStack : 1
     property string suitChar
     property var acceptedSuits : [1,2,3,4]
     property string type
     property bool acceptsDrop : false;
     property var childCard;
-
+    property bool dropEnabled : dropArea.enabled
     z: 1
     width: deviceOrientation === Orientation.Portrait ? 62 : 76
     height: deviceOrientation === Orientation.Portrait ? 86 : 96
@@ -21,24 +21,19 @@ Rectangle {
     color: Theme.rgba(Theme.secondaryHighlightColor, 0.5)//"#800000FF"
     border.color: "black"
     border.width: 1
-
-
     radius: 10
 
     StateGroup {
-    states: [
-        State {
-            when: stack < maxStack
-            PropertyChanges {
-                target: dropArea
-                enabled: true
+        states: [
+            State {
+                when: stack < maxStack
+                PropertyChanges {
+                    target: dropArea
+                    enabled: true
+                }
             }
-        }
-
-
-    ]
+        ]
     }
-
 
     function reset()
     {
@@ -59,18 +54,14 @@ Rectangle {
             if (stack === 0)
             {
                 Qt.freeCells = Qt.freeCells - 1
-                //console.log(Qt.freeCells)
             }
         }
 
         Card.parent = dropRect
-        //childCard = Card
         Card.anchors.verticalCenter = dropRect.verticalCenter
         Card.anchors.horizontalCenter = dropRect.horizontalCenter
         Card.y = 0
         dropRect.modifyStack(Card.stack + 1)
-
-        //Card.totalStack = dropRect.modifyStack(Card.stack + 1)
 
         Card.setTotalStack(stack)
 
@@ -92,13 +83,11 @@ Rectangle {
     }
     function removeCard(Card)
     {
-        //childCard = null
         modifyStack(-(Card.stack + 1))
 
         if (type != "suitcell")
         {
             Qt.freeCells = Qt.freeCells + 1
-            //console.log(Qt.freeCells)
         }
     }
     function modifyStack(value)
@@ -142,11 +131,6 @@ Rectangle {
             {
                 drop.source.parent = drop.source.dragParent
                 field.makeMove(drop.source, dropRect, true)
-                //drop.source.dragParent.removeCard(drop.source)
-
-                //console.log("drop 1")
-                //dropCard(drop.source)
-
                 drop.accept()
             }
             acceptsDrop = false
@@ -157,12 +141,10 @@ Rectangle {
             if (Rules.canDropOnCell(drag.source, dropRect))
             {
                 acceptsDrop = true
-                //drag.accept()
             }
             else
             {
                 acceptsDrop = false
-                //drag.accepted = false
             }
 
         }
@@ -170,9 +152,30 @@ Rectangle {
         {
             acceptsDrop = false
         }
+        onEnabledChanged:
+        {
+            if (dropArea.enabled)
+            {
+
+                if (typeof(dropRect.parent.droppableItems[dropRect.dbId]) === "undefined")
+                {
+                    dropRect.parent.addToDroppableItems(dropRect)
+
+                }
+
+            }
+            else
+            {
+                if (typeof(dropRect.parent.droppableItems[dropRect.dbId]) !== "undefined")
+                {
+                    dropRect.parent.removeFromDroppableItems(dropRect);
+
+                }
+            }
+        }
         states: [
             State {
-                when: acceptsDrop//dropArea.containsDrag
+                when: acceptsDrop
                 PropertyChanges {
                     target: dropRect
                     border.color: "white"
@@ -192,7 +195,7 @@ Rectangle {
         {
             if (dropRect.parent.selectedCard !== null)
             {
-                if (Rules.canDropOnCell(dropRect.parent.selectedCard, dropRect))
+                if (Rules.canDropOnCell(dropRect.parent.selectedCard, dropRect) && dropArea.enabled)
                 {
                     var move = [{moved : dropRect.parent.selectedCard, from : dropRect.parent.selectedCard.parent, to : dropRect}]
                     dropRect.parent.moves.push(move);

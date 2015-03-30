@@ -43,7 +43,7 @@ function canDropOnCell(Card, Cell) {
 
 function canDropOnCard(Dragged, Card) {
     if (Dragged.rank !== Card.rank - 1 || (Card.acceptedSuits.indexOf(Dragged.suit) === -1) ||
-        Dragged.stack  > Qt.freeCells)
+        Dragged.stack  > Qt.freeCells || Card.stack >= Card.maxStack)
     {
         return false;
     }
