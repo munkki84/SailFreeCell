@@ -342,7 +342,7 @@ Rectangle {
                     field.selectedCard.acceptsDrop = false;
 
                     // check is it possible to drop selected card on this card
-                    if (Rules.canDropOnCard(field.selectedCard, card) && dropArea.enabled)
+                    if (Rules.canDragCard(field.selectedCard) && Rules.canDropOnCard(field.selectedCard, card) && dropArea.enabled)
                     {
                         // make animated move
                         var move = [{moved : field.selectedCard, from : field.selectedCard.parent, to : card}]
