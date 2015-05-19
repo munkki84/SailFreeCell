@@ -20,10 +20,13 @@ OTHER_FILES += \
     qml/items/Card.qml \
     qml/items/Cell.qml \
     qml/items/PlayField.qml \
-    qml/items/Rules.js \
     rpm/harbour-sailfreecell.spec \
     rpm/harbour-sailfreecell.yaml \
-    qml/harbour-sailfreecell.qml
+    qml/harbour-sailfreecell.qml \
+    qml/items/SuitCell.qml \
+    qml/items/FieldCell.qml \
+    qml/items/SingleCell.qml \
+    qml/items/FreeCellItem.qml
 
 HEADERS += \
     src/threadsafequeue.h \

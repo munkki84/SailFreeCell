@@ -1,13 +1,12 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
-import "Rules.js" as Rules
-Rectangle {
+FreeCellItem {
     id: dropRect
     property int dbId
-    property int stack: 0
+    stack: 0
     property int totalStack: 0
     property int maxOffset: 0
-    property int maxStack : 1
+    maxStack : 1
     property string suitChar
     property var acceptedSuits : [1,2,3,4]
     property string type
@@ -47,15 +46,24 @@ Rectangle {
         return 0;
     }
 
+    function decreaseFreeCells()
+    {
+        // subclass responsability
+    }
+
+    function increaseFreeCells()
+    {
+        // subclass responsability
+    }
+
+    function adjustCardDrop(Card)
+    {
+        Card.setDrop(false) // overwritten in FieldCell
+    }
+
     function dropCard(Card)
     {
-        if (type != "suitcell")
-        {
-            if (stack === 0)
-            {
-                Qt.freeCells = Qt.freeCells - 1
-            }
-        }
+        dropRect.decreaseFreeCells()
 
         Card.parent = dropRect
         Card.anchors.verticalCenter = dropRect.verticalCenter
@@ -65,30 +73,13 @@ Rectangle {
 
         Card.setTotalStack(stack)
 
-        if (type === "suitcell")
-        {
-            Card.setDrop(false)
-        }
-        else if (type === "cell")
-        {
-            Card.setDrop(false)
-        }
-        else
-        {
-            if (Card.stack === 0)
-            {
-                Card.setDrop(true)
-            }
-        }
+        dropRect.adjustCardDrop(Card)
     }
     function removeCard(Card)
     {
         modifyStack(-(Card.stack + 1))
 
-        if (type != "suitcell")
-        {
-            Qt.freeCells = Qt.freeCells + 1
-        }
+        dropRect.increaseFreeCells()
     }
     function modifyStack(value)
     {
@@ -138,7 +129,7 @@ Rectangle {
 
         onEntered: {
 
-            if (Rules.canDropOnCell(drag.source, dropRect))
+            if (dropRect.canReceiveCard(drag.source, dropRect))
             {
                 acceptsDrop = true
             }
@@ -195,7 +186,7 @@ Rectangle {
         {
             if (dropRect.parent.selectedCard !== null)
             {
-                if (Rules.canDragCard(dropRect.parent.selectedCard) && Rules.canDropOnCell(dropRect.parent.selectedCard, dropRect) && dropArea.enabled)
+                if (dropRect.parent.selectedCard.canBeDragged() && dropRect.canReceiveCard(dropRect.parent.selectedCard) && dropArea.enabled)
                 {
                     var move = [{moved : dropRect.parent.selectedCard, from : dropRect.parent.selectedCard.parent, to : dropRect}]
                     dropRect.parent.moves.push(move);

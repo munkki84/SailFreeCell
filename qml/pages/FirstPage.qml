@@ -102,8 +102,6 @@ Page {
                         field.resetField(false);
                     }
 
-
-                    //onClicked:
                     onPressAndHold:
                     {
                         field.resetField(true);
