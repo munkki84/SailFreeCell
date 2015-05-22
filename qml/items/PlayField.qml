@@ -19,134 +19,114 @@ Item {
     property var selectedCard : null
     property var db
 
-    Cell {
+    SingleCell {
         id: cell1
         stack: 0
-        type: "cell"
         x: deviceOrientation === Orientation.Portrait ? portCellsX : field8.x + field8.width + 60
         y: deviceOrientation === Orientation.Portrait ? portCellsY  : landCellsY
     }
 
-    Cell {
+    SingleCell {
         id: cell2
         stack: 0
-        type: "cell"
         x: deviceOrientation === Orientation.Portrait ? cell1.x + cell1.width + smallGap/*74*/ : cell1.x
         y: deviceOrientation === Orientation.Portrait ? portCellsY : cell1.y + cell1.height + smallGap
     }
-    Cell {
+    SingleCell {
         id: cell3
         stack: 0
-        type: "cell"
         x: deviceOrientation === Orientation.Portrait ? cell2.x + cell2.width + smallGap/*138*/ : cell1.x
         y: deviceOrientation === Orientation.Portrait ? portCellsY : cell2.y + cell2.height + smallGap
     }
-    Cell {
+    SingleCell {
         id: cell4
         stack: 0
-        type: "cell"
         x: deviceOrientation === Orientation.Portrait ? cell3.x + cell3.width + smallGap/*202*/ : cell1.x
         y: deviceOrientation === Orientation.Portrait ? portCellsY : cell3.y + cell3.height + smallGap
     }
 
-    Cell {
+    SuitCell {
         id: suit1
         stack: 0
-        maxStack: 13
         acceptedSuits:[1]
         suitChar: "\u2660"
-        type: "suitcell"
         x: deviceOrientation === Orientation.Portrait ? cell4.x + cell4.width + bigGap/*270*/ :  cell4.x + cell4.width + bigGap
         y: deviceOrientation === Orientation.Portrait ? portCellsY : landCellsY
     }
 
-    Cell {
+    SuitCell {
         id: suit2
         stack: 0
-        maxStack: 13
         acceptedSuits:[2]
-        type: "suitcell"
         suitChar: "\u2663"
         x: deviceOrientation === Orientation.Portrait ? suit1.x + suit1.width + smallGap  : suit1.x/*334*/
         y: deviceOrientation === Orientation.Portrait ? portCellsY : suit1.y + suit1.height + smallGap
     }
-    Cell {
+    SuitCell {
         id: suit3
         stack: 0
-        maxStack: 13
         acceptedSuits:[3]
-        type: "suitcell"
         suitChar: "\u2665"
         x: deviceOrientation === Orientation.Portrait ? suit2.x + suit2.width + smallGap  : suit1.x/*398*/
         y: deviceOrientation === Orientation.Portrait ? portCellsY : suit2.y + suit2.height + smallGap
     }
-    Cell {
+    SuitCell {
         id: suit4
         stack: 0
-        maxStack: 13
         acceptedSuits:[4]
-        type: "suitcell"
         suitChar: "\u2666"
         x: deviceOrientation === Orientation.Portrait ? suit3.x + suit3.width + smallGap  : suit1.x/*462*/
         y: deviceOrientation === Orientation.Portrait ? portCellsY : suit3.y + suit3.height + smallGap
     }
 
-    Cell {
+    FieldCell {
         id: field1
         stack: 0
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? portCellsX : landFieldsX
         y: deviceOrientation === Orientation.Portrait ? suit4.y + suit4.height + cellGap : landFieldsY/*120*/
     }
 
-    Cell {
+    FieldCell {
         id: field2
         stack: 0
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field1.x + field1.width + smallGap/*74*/ : field1.x + field1.width + smallGap
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
-    Cell {
+    FieldCell {
         id: field3
         stack: 0
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field2.x + field2.width + smallGap/*138*/ : field2.x + field2.width + smallGap
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
-    Cell {
+    FieldCell {
         id: field4
         stack: 0
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field3.x + field3.width + smallGap/*202*/ : field3.x + field3.width + smallGap
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
 
-    Cell {
+    FieldCell {
         id: field5
         stack: 0
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field4.x + field4.width + smallGap : field4.x + field4.width + smallGap /*270*/
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
 
-    Cell {
+    FieldCell {
         id: field6
         stack: 0
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field5.x + field5.width + smallGap : field5.x + field5.width + smallGap /*334*/
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
-    Cell {
+    FieldCell {
         stack: 0
         id: field7
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field6.x + field6.width + smallGap : field6.x + field6.width + smallGap /*398*/
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
-    Cell {
+    FieldCell {
         stack: 0
         id: field8
-        type: "freecell"
         x: deviceOrientation === Orientation.Portrait ? field7.x + field7.width + smallGap : field7.x + field7.width + smallGap /*462*/
         y: deviceOrientation === Orientation.Portrait ? field1.y : landFieldsY
     }
@@ -243,10 +223,13 @@ Item {
 
     function resetField(forceReset)
     {
-        if (!forceReset && !solved())
+        if (!solved() && !forceReset)
         {
             return;
         }
+
+        console.log("continuing normal behavior");
+
         if (Qt.animating !== 0 || Qt.reset === 1)
         {
             return;
@@ -262,6 +245,8 @@ Item {
         moves = [];
         canAutoMove = false;
         Qt.freeCells = 12;
+        Qt.freeSingleCells = 4;
+        Qt.freeFieldCells = 8;
         Qt.animating = 0;
         var cardPlaces = [field1, field2, field3, field4, field5, field6, field7, field8];
         var placeIndex = 0;
@@ -497,6 +482,8 @@ Item {
         Component.onCompleted: {
 
             Qt.freeCells = 12;
+            Qt.freeSingleCells = 4;
+            Qt.freeFieldCells = 8;
 
             //resetCells();
             db = LocalStorage.openDatabaseSync("SailFreeCellDB", "1.0", "Database", 1000000);
