@@ -230,8 +230,23 @@ Item {
         return retval
     }
 
-    function resetField()
+    function solved() {
+        for (var i = 0; i < suitCells.length; i++)
+        {
+            if (suitCells[i].stack < 13)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function resetField(forceReset)
     {
+        if (!forceReset && !solved())
+        {
+            return;
+        }
         if (Qt.animating !== 0 || Qt.reset === 1)
         {
             return;
@@ -638,7 +653,7 @@ Item {
             }
             else
             {
-                resetField();
+                resetField(true);
             }
         }
 

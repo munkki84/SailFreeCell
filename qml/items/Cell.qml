@@ -195,7 +195,7 @@ Rectangle {
         {
             if (dropRect.parent.selectedCard !== null)
             {
-                if (Rules.canDropOnCell(dropRect.parent.selectedCard, dropRect) && dropArea.enabled)
+                if (Rules.canDragCard(dropRect.parent.selectedCard) && Rules.canDropOnCell(dropRect.parent.selectedCard, dropRect) && dropArea.enabled)
                 {
                     var move = [{moved : dropRect.parent.selectedCard, from : dropRect.parent.selectedCard.parent, to : dropRect}]
                     dropRect.parent.moves.push(move);

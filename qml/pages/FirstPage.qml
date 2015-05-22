@@ -98,10 +98,14 @@ Page {
                     //rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
 
 
-                    //onClicked:
+                    onClicked:
+                    {
+                        field.resetField(false);
+                    }
+
                     onPressAndHold:
                     {
-                        field.resetField();
+                        field.resetField(true);
                     }
 
                 }
