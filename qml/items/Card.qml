@@ -1,7 +1,6 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
-import "Rules.js" as Rules
-Rectangle {
+FreeCellItem {
     z: 2
     id: card
     state: "stopped"
@@ -11,11 +10,11 @@ Rectangle {
     property int suit
     property string suitChar
     property string suitColor
-    property int stack: 0
+    stack: 0
     property int maxOffset : 50
     property int stackNarrowStart: deviceOrientation === Orientation.Portrait ? 8 : 6
     property double narrowMultiplier:  deviceOrientation === Orientation.Portrait ? 1 : 1.5
-    property int maxStack : 1
+    maxStack : 1
     property int totalStack : 0
     property Item dragParent
     property Item targetParent
@@ -76,19 +75,9 @@ Rectangle {
             for (var j = 0; j < collidingItems.length; j++)
             {
                 var item = collidingItems[j]
-                if (item.item.type === "card")
+                if (item.item.canReceiveCard(card))
                 {
-                    if (Rules.canDropOnCard(card, item.item))
-                    {
-                         dropCandidates.push({spot: hotSpots[i], distance: item.distance});
-                    }
-                }
-                else
-                {
-                    if (Rules.canDropOnCell(card, item.item))
-                    {
-                        dropCandidates.push({spot: hotSpots[i], distance: item.distance});
-                    }
+                     dropCandidates.push({spot: hotSpots[i], distance: item.distance});
                 }
             }
         }
@@ -302,7 +291,8 @@ Rectangle {
 
         }
         onPressed: {
-            if (Qt.animating !== 0 || !Rules.canDragCard(card))
+            console.log("pressed " + rank + " " + rankChar + " " + suit + " " + suitChar + " animating:" + Qt.animating + " canBeDragged:" + card.canBeDragged());
+            if (Qt.animating !== 0 || !card.canBeDragged())
             {
                 mouse.accepted = false
             }
@@ -314,6 +304,7 @@ Rectangle {
 
         onClicked:
         {
+            console.log("clicked " + rank + " " + rankChar + " " + suit + " " + suitChar);
             // this card was already clicked, check are we trying to double click
             if (Date.now() - lastClick < 300)
             {
@@ -341,8 +332,8 @@ Rectangle {
                     // deselect selected card
                     field.selectedCard.acceptsDrop = false;
 
-                    // check is it possible to drop selected card on this card -- first check selected card is still draggable
-                    if (Rules.canDragCard(field.selectedCard) && Rules.canDropOnCard(field.selectedCard, card) && dropArea.enabled)
+                    // check is it possible to drop selected card on this card
+                    if (field.selectedCard.canBeDragged() && card.canReceiveCard(field.selectedCard) && dropArea.enabled)
                     {
                         // make animated move
                         var move = [{moved : field.selectedCard, from : field.selectedCard.parent, to : card}]
@@ -432,7 +423,7 @@ Rectangle {
 
         onEntered: {
             //console.log(card.rankChar + card.suitChar)
-            if (Rules.canDropOnCard(drag.source, card))
+            if (card.canReceiveCard(drag.source))
             {
                 acceptsDrop = true
             }
@@ -481,4 +472,23 @@ Rectangle {
 
         ]
     }
+
+    function canBeDragged()
+    {
+        return card.parent.canReleaseCard()
+                && (
+                    card.stack === 0
+                    || (
+                        card.acceptsRank(card.childCard.rank)
+                        && card.acceptsSuit(card.childCard.suit)
+                        && card.childCard.canBeDragged()
+                        && card.stack <= card.maxMoveStack(card)
+                        )
+                    )
+    }
+
+    function acceptsRank(rank){
+        return rank === card.rank - 1;
+    }
+
 }

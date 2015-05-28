@@ -97,7 +97,6 @@ Page {
                     text : deviceOrientation === Orientation.Portrait ? "New Game" : " New\nGame"
                     //rotation : deviceOrientation === Orientation.Portrait ? 0 : -90
 
-
                     onClicked:
                     {
                         field.resetField(false);
