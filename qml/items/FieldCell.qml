@@ -28,6 +28,6 @@ Cell {
 
     function freeFieldCells()
     {
-        return Qt.freeFieldCells; // overwritten in FieldCell
+        return Qt.freeFieldCells - 1; // overwritten in FieldCell
     }
 }
