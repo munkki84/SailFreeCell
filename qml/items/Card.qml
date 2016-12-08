@@ -11,9 +11,9 @@ FreeCellItem {
     property string suitChar
     property string suitColor
     stack: 0
-    property int maxOffset : 50
-    property int stackNarrowStart: deviceOrientation === Orientation.Portrait ? 8 : 6
-    property double narrowMultiplier:  deviceOrientation === Orientation.Portrait ? 1 : 1.5
+    property int maxOffset : 50 * Theme.pixelRatio
+    property int stackNarrowStart: 5 * Theme.pixelRatio
+    property double narrowMultiplier: (deviceOrientation === Orientation.Portrait ? 1 : 1.5) * Theme.pixelRatio
     maxStack : 1
     property int totalStack : 0
     property Item dragParent
@@ -30,8 +30,8 @@ FreeCellItem {
                                 [{x: 5, y: 5}, {x: 55, y: 5}]://, {x: 5, y: 42 }, {x: 55, y: 42}] :
                                 [{x: 5, y: 5}, {x: 69, y: 5}]//, {x: 5, y: 47 }, {x: 69, y: 47}]
     property bool dropEnabled : dropArea.enabled
-    width: deviceOrientation === Orientation.Portrait ? 60 : 74
-    height: deviceOrientation === Orientation.Portrait ? 84 : 94
+    width: (deviceOrientation === Orientation.Portrait ? 60 : 74) * Theme.pixelRatio
+    height: (deviceOrientation === Orientation.Portrait ? 84 : 94) * Theme.pixelRatio
     color: "white"
     border.color: "black"
     border.width: 1
@@ -243,7 +243,7 @@ FreeCellItem {
         id: rankText
         x:4; y:0
         color: "black"
-        font.pixelSize: 24
+        font.pixelSize: 24 * Theme.pixelRatio
         font.bold: true
         text: rankChar
     }
@@ -252,7 +252,7 @@ FreeCellItem {
         x: card.width - font.pixelSize - 4/*32*/;
         y: 0
         color: suitColor
-        font.pixelSize: 24
+        font.pixelSize: 24 * Theme.pixelRatio
         text: suitChar
     }
 

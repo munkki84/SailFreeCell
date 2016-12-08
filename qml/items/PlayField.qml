@@ -4,18 +4,19 @@ import QtQuick.LocalStorage 2.0
 
 Item {
     id : playfield
-    width : 470; height: 400
+    width : parent.width // 470 * Theme.pixelRatio
+    height: parent.height // 400 * Theme.pixelRatio
     property bool canAutoMove : false
     property string type: "playfield"
-    property int smallGap: 2
-    property int bigGap: 4
-    property int cellGap: 20
-    property int landCellsX : 570
-    property int landCellsY : 12//140
+    property int smallGap: 2 * Theme.pixelRatio
+    property int bigGap: 4 * Theme.pixelRatio
+    property int cellGap: 20 * Theme.pixelRatio
+    property int landCellsX : 570 * Theme.pixelRatio
+    property int landCellsY : 12 * Theme.pixelRatio //140
     property int landFieldsY : 12
     property int landFieldsX : 112
-    property int portCellsX : 12
-    property int portCellsY : 0
+    property int portCellsX : 0.025 * width
+    property int portCellsY : 2 * Theme.pixelRatio
     property var selectedCard : null
     property var db
 

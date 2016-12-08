@@ -14,8 +14,8 @@ FreeCellItem {
     property var childCard;
     property bool dropEnabled : dropArea.enabled
     z: 1
-    width: deviceOrientation === Orientation.Portrait ? 62 : 76
-    height: deviceOrientation === Orientation.Portrait ? 86 : 96
+    width: (deviceOrientation === Orientation.Portrait ? 62 : 76) * Theme.pixelRatio
+    height: (deviceOrientation === Orientation.Portrait ? 86 : 96) * Theme.pixelRatio
 
     color: Theme.rgba(Theme.secondaryHighlightColor, 0.5)//"#800000FF"
     border.color: "black"
@@ -108,7 +108,7 @@ FreeCellItem {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         color: "black"
-        font.pixelSize: 48
+        font.pixelSize: 48 * Theme.pixelRatio
         opacity: 0.5
         text: suitChar
     }

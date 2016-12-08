@@ -65,15 +65,15 @@ Page {
                 id: rect
                 y: deviceOrientation === Orientation.Portrait ? 12 : 0
                 x: deviceOrientation === Orientation.Portrait ? 0 : 12
-                width: deviceOrientation === Orientation.Portrait ? page.width : 80
+                width: deviceOrientation === Orientation.Portrait ? page.width : 80 * Theme.pixelRatio
                 anchors.left: deviceOrientation === Orientation.Portrait ? column.left : undefined
-                height: deviceOrientation === Orientation.Portrait ? 60 : page.height
+                height: deviceOrientation === Orientation.Portrait ? 60 * Theme.pixelRatio : page.height
                 color : "transparent"
                 //border.color: "white"
                 //border.width: 1
                 Button
                 {
-
+                    id: undoMove
                     anchors.left: deviceOrientation === Orientation.Portrait ? rect.left : rect.left
                     width:  deviceOrientation === Orientation.Portrait ? rect.width / 2 : rect.width
                     height: deviceOrientation === Orientation.Portrait ? rect.height : rect.height / 2
@@ -88,6 +88,7 @@ Page {
                 }
                 Button
                 {
+                    id: newGame
                     width:  deviceOrientation === Orientation.Portrait ? rect.width / 2 : rect.width
                     height: deviceOrientation === Orientation.Portrait ? rect.height : rect.height / 2
                     y: deviceOrientation === Orientation.Portrait ? 0 : rect.height
@@ -113,6 +114,7 @@ Page {
             {
                 id: field
                 y: deviceOrientation === Orientation.Portrait ? rect.height + 20 : 0
+                x: deviceOrientation === Orientation.Portrait ? 0 : (rect.height <= 540 ? 0 : newGame.width) // jolla phone special
             }
         }
     }
